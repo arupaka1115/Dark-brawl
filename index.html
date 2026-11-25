@@ -372,6 +372,8 @@
   window.onerror = function(msg, url, line) {
     alert("エラー内容: " + msg + "\nファイル: " + url + "\n行番号: " + line);
   };
+  window.addEventListener("error", (e) => alert("JSエラー: " + e.message));
+  window.addEventListener("unhandledrejection", (e) => alert("通信エラー: " + e.reason));
 </script>
 </body>
 </html>
