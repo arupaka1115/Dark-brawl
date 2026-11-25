@@ -1,5 +1,4 @@
-    <script>
-        /**
+　       /**
          * ============================================================================
          * SHADOW BRAWL - 2.5D Top-Down Arena Action Game
          * ----------------------------------------------------------------------------
@@ -8196,4 +8195,3 @@
             lastFrameTime = performance.now();
             requestAnimationFrame(gameLoop);
         };
-    </script>
