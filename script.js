@@ -1,3 +1,104 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://gstatic.com";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, increment } from "https://gstatic.com";
+
+// あなたのDark brawlプロジェクトの設定
+const firebaseConfig = {
+  apiKey: "AIzaSyCWWM4zIKbwNFZlicTAT8p_BvM_oC_9jyg",
+  authDomain: "dark-brawl.firebaseapp.com",
+  projectId: "dark-brawl",
+  storageBucket: "dark-brawl.firebasestorage.app",
+  messagingSenderId: "995605284599",
+  appId: "1:995605284599:web:568d3340a58d01295435f2",
+  measurementId: "G-LQWKMQC0ZV"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+let playerStats = {
+  username: "",
+  trophies: 0,
+  wins: 0,
+  matches: 0
+};
+
+// プレイヤー名を裏側でFirebase用の形式に変換
+const toEmail = (name) => `${name.trim()}@darkbrawl.local`;
+
+// 新規登録ボタン
+document.getElementById("registerBtn").addEventListener("click", async () => {
+  const name = document.getElementById("usernameInput").value;
+  const pass = document.getElementById("passwordInput").value;
+  const msg = document.getElementById("authMessage");
+
+  if (!name || pass.length < 6) {
+    msg.textContent = "英数字の名前と6文字以上のパスワードを入力してください";
+    return;
+  }
+
+  try {
+    msg.textContent = "登録中...";
+    const userCredential = await createUserWithEmailAndPassword(auth, toEmail(name), pass);
+    currentUser = userCredential.user;
+
+    playerStats = { username: name, trophies: 0, wins: 0, matches: 0 };
+    await setDoc(doc(db, "users", currentUser.uid), playerStats);
+
+    startGameAfterLogin();
+  } catch (error) {
+    msg.textContent = "エラー: すでに使われている名前か、使えない文字が含まれています";
+  }
+});
+
+// ログインボタン
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const name = document.getElementById("usernameInput").value;
+  const pass = document.getElementById("passwordInput").value;
+  const msg = document.getElementById("authMessage");
+
+  try {
+    msg.textContent = "ログイン中...";
+    const userCredential = await signInWithEmailAndPassword(auth, toEmail(name), pass);
+    currentUser = userCredential.user;
+
+    const docSnap = await getDoc(doc(db, "users", currentUser.uid));
+    if (docSnap.exists()) {
+      playerStats = docSnap.data();
+    }
+
+    startGameAfterLogin();
+  } catch (error) {
+    msg.textContent = "名前またはパスワードが間違っています";
+  }
+});
+
+// ログイン成功時にログイン画面を消してゲームを始める
+function startGameAfterLogin() {
+  document.getElementById("authScreen").style.display = "none";
+  alert(`ようこそ ${playerStats.username} さん！\nトロフィー: ${playerStats.trophies} / 勝利数: ${playerStats.wins}`);
+  
+  // ★ここに既存のゲーム開始関数（gameLoop() や init() など）を移動する★
+}
+
+// 試合終了時に呼び出して戦績を保存する関数
+async function saveMatchResult(isWin, trophyChange) {
+  if (!currentUser) return;
+
+  playerStats.trophies = Math.max(0, playerStats.trophies + trophyChange);
+  playerStats.matches += 1;
+  if (isWin) playerStats.wins += 1;
+
+  const userRef = doc(db, "users", currentUser.uid);
+  await updateDoc(userRef, {
+    trophies: increment(trophyChange),
+    matches: increment(1),
+    wins: isWin ? increment(1) : increment(0)
+  });
+}
+// ★この下に、今までのゲームのコードを貼り付ける★
 　       /**
          * ============================================================================
          * SHADOW BRAWL - 2.5D Top-Down Arena Action Game
