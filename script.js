@@ -1,8 +1,8 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://gstatic.com";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, increment } from "https://gstatic.com";
+const base = "https://www.gstatic.com/firebasejs/13.4.0/";
+const { initializeApp } = await import(base + "firebase-app.js");
+const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import(base + "firebase-auth.js");
+const { getFirestore, doc, setDoc, getDoc, updateDoc, increment } = await import(base + "firebase-firestore.js");
 
-// あなたのDark brawlプロジェクトの設定
 const firebaseConfig = {
   apiKey: "AIzaSyCWWM4zIKbwNFZlicTAT8p_BvM_oC_9jyg",
   authDomain: "dark-brawl.firebaseapp.com",
@@ -25,10 +25,8 @@ let playerStats = {
   matches: 0
 };
 
-// プレイヤー名を裏側でFirebase用の形式に変換
 const toEmail = (name) => `${name.trim()}@darkbrawl.local`;
 
-// 新規登録ボタン
 document.getElementById("registerBtn").addEventListener("click", async () => {
   const name = document.getElementById("usernameInput").value;
   const pass = document.getElementById("passwordInput").value;
@@ -49,11 +47,10 @@ document.getElementById("registerBtn").addEventListener("click", async () => {
 
     startGameAfterLogin();
   } catch (error) {
-    msg.textContent = "エラー: すでに使われている名前か、使えない文字が含まれています";
+    msg.textContent = "エラー: " + error.message;
   }
 });
 
-// ログインボタン
 document.getElementById("loginBtn").addEventListener("click", async () => {
   const name = document.getElementById("usernameInput").value;
   const pass = document.getElementById("passwordInput").value;
@@ -71,19 +68,15 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
 
     startGameAfterLogin();
   } catch (error) {
-    msg.textContent = "名前またはパスワードが間違っています";
+    msg.textContent = "エラー: " + error.message;
   }
 });
 
-// ログイン成功時にログイン画面を消してゲームを始める
 function startGameAfterLogin() {
   document.getElementById("authScreen").style.display = "none";
   alert(`ようこそ ${playerStats.username} さん！\nトロフィー: ${playerStats.trophies} / 勝利数: ${playerStats.wins}`);
-  
-  // ★ここに既存のゲーム開始関数（gameLoop() や init() など）を移動する★
 }
 
-// 試合終了時に呼び出して戦績を保存する関数
 async function saveMatchResult(isWin, trophyChange) {
   if (!currentUser) return;
 
@@ -98,22 +91,6 @@ async function saveMatchResult(isWin, trophyChange) {
     wins: isWin ? increment(1) : increment(0)
   });
 }
-// ★この下に、今までのゲームのコードを貼り付ける★
-　       /**
-         * ============================================================================
-         * SHADOW BRAWL - 2.5D Top-Down Arena Action Game
-         * ----------------------------------------------------------------------------
-         * 8カテゴリー分類 & キャラクター選択システム:
-         * - サポーター / スピーダー / アタックディーラー / スナイパー
-         * - スロワー / ヘビー / コントローラー / キラー
-         * プレイアブルキャラクター:
-         * - ブレイズ（アタックディーラー）：赤いマント＆黄色い王冠の骸骨。
-         *   通常攻撃＝横に並んだ3つの火球 / ウルト＝前方高速ダッシュ
-         * - ヴァイパー（スナイパー）：猛毒の狙撃手。
-         *   通常攻撃＝高火力単発スナイプ / ウルト＝壁・敵貫通の高火力猛毒弾
-         * ============================================================================
-         */
-
         // ----------------------------------------------------------------------------
         // 0. 8カテゴリー定義 ＆ キャラクターロスターデータ
         // ----------------------------------------------------------------------------
