@@ -1,3 +1,7 @@
+window.onerror = function(msg, url, line) {
+  alert("エラー: " + msg + " (" + line + "行目)");
+};
+
 const base = "https://www.gstatic.com/firebasejs/13.4.0/";
 const { initializeApp } = await import(base + "firebase-app.js");
 const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import(base + "firebase-auth.js");
