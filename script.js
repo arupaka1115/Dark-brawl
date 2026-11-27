@@ -8277,8 +8277,7 @@ async function saveMatchResult(isWin, trophyChange) {
             requestAnimationFrame(gameLoop);
         }
 
-        // window.onload 後にループ開始
-        window.onload = function () {
+        function bootGame() {
             renderCharacterSelectUI();
             updateHomeLobbyUI();
             selectGameMode(selectedGameMode, false);
@@ -8286,4 +8285,10 @@ async function saveMatchResult(isWin, trophyChange) {
             updateDefaultStickPositions();
             lastFrameTime = performance.now();
             requestAnimationFrame(gameLoop);
-        };
+        }
+
+        if (document.readyState === "complete") {
+            bootGame();
+        } else {
+            window.addEventListener("load", bootGame);
+        }
