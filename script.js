@@ -1,4 +1,7 @@
 window.onerror = function(msg, url, line) {
+  alert("エラー: " + msg + " (" + line + "行目)");
+};
+window.onerror = function(msg, url, line) {
   alert("エラー発見: " + msg + " (" + line + "行目)");
 };
 window.addEventListener("unhandledrejection", function(e) {
