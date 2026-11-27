@@ -4658,6 +4658,11 @@ async function saveMatchResult(isWin, trophyChange) {
             gameState.status = "ended";
             sound.playEnd(playerWon);
 
+          // ▼ 戦績をFirestoreにクラウド保存（勝利: +8 / 敗北: -4）
+            if (typeof saveMatchResult === "function") {
+                saveMatchResult(playerWon, playerWon ? 8 : -4);
+            }
+
             document.getElementById("hudLayer").classList.add("hidden");
             document.getElementById("respawnOverlay").classList.add("hidden");
             document.getElementById("resultModal").classList.remove("hidden");
