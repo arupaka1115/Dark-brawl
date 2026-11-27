@@ -154,6 +154,17 @@
                         アタックディーラー
                     </span>
                 </button>
+                <!-- フレンド画面を開くボタン -->
+                <button id="openFriendsBtn" type="button" class="brawl-btn relative group flex flex-col items-center gap-1 bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-2 border-cyan-400/80 hover:border-cyan-300 px-4 py-3 sm:px-5 sm:py-3.5 rounded-3xl shadow-[0_0_20px_rgba(34,211,238,0.2)] cursor-pointer">
+                    <span id="friendBadge" class="hidden absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1.5 rounded-full bg-rose-500 border-2 border-slate-950 text-white text-[11px] font-black flex items-center justify-center shadow-lg">0</span>
+                    <div class="w-10 h-10 rounded-2xl bg-slate-950/90 border border-cyan-400/50 flex items-center justify-center text-xl group-hover:scale-110 transition">
+                        👥
+                    </div>
+                    <span class="text-xs sm:text-sm font-black text-cyan-300 tracking-wider">フレンド</span>
+                    <span id="homeFriendCountBadge" class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-cyan-500/20 text-cyan-200 border border-cyan-500/40">
+                        0人
+                    </span>
+                </button>
             </div>
 
             <!-- 中央下部寄り：回転中のキャラクター名＆役職バッジ -->
@@ -367,6 +378,54 @@
             </div>
         </div>
     </div>
+    <!-- ▼ ここから貼り付け ▼ -->
+    <div id="friendsModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+        <div class="w-full max-w-2xl max-h-[88vh] bg-slate-900 border-2 border-cyan-400/60 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+            <div class="px-5 py-4 bg-gradient-to-r from-slate-950 via-slate-900 to-cyan-950/60 border-b border-slate-700/80 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">👥</span>
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-black text-cyan-300 tracking-wide">フレンド ＆ ソーシャル</h2>
+                        <p id="myFriendIdLabel" class="text-[11px] text-slate-400">あなたの名前: ---</p>
+                    </div>
+                </div>
+                <button id="closeFriendsBtn" type="button" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-rose-500/80 text-slate-200 hover:text-white font-black transition cursor-pointer">✕</button>
+            </div>
+
+            <div class="p-4 bg-slate-950/60 border-b border-slate-800">
+                <label class="block text-xs font-bold text-slate-300 mb-1.5">🔍 プレイヤー名で検索してフレンド申請</label>
+                <div class="flex gap-2">
+                    <input id="friendSearchInput" type="text" placeholder="相手のユーザー名を入力..." class="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-cyan-400 outline-none text-sm text-white placeholder-slate-500">
+                    <button id="friendSearchBtn" type="button" class="px-4 py-2.5 rounded-xl bg-gradient-to-b from-cyan-400 to-blue-600 text-slate-950 font-black text-sm hover:brightness-110 transition cursor-pointer shrink-0">
+                        申請する
+                    </button>
+                </div>
+                <p id="friendSearchMsg" class="mt-1.5 text-xs text-amber-300 min-h-[16px]"></p>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-5">
+                <div id="friendRequestsSection" class="hidden">
+                    <h3 class="text-xs font-black text-rose-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <span>📩 届いているフレンド申請</span>
+                        <span id="friendReqCount" class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px]">0</span>
+                    </h3>
+                    <div id="friendRequestsList" class="space-y-2"></div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs font-black text-cyan-300 uppercase tracking-wider">🏆 フレンド一覧（トロフィー順）</h3>
+                        <button id="refreshFriendsBtn" type="button" class="text-[11px] font-bold text-slate-400 hover:text-cyan-300 cursor-pointer">🔄 更新</button>
+                    </div>
+                    <div id="friendsList" class="space-y-2">
+                        <div class="text-center text-xs text-slate-500 py-6">読み込み中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ▲ ここまで貼り付け ▲ -->
+
     <script type="module" src="script.js"></script>
 </body>
 </html>
