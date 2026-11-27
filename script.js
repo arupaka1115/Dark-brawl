@@ -8495,7 +8495,7 @@ document.getElementById("refreshFriendsBtn")?.addEventListener("click", () => {
 
         function initMatch() {
             gameState.status = "intro"; // ← 追加：1戦目の "ended" 状態をリセット
-          　if (typeof updateMyPresence === "function") updateMyPresence("in_match");
+            if (typeof updateMyPresence === "function") updateMyPresence("in_match");
             resizeCanvas();             // ← 追加：2戦目以降もキャンバスサイズを確実に再計算
           
             const isSoccer = selectedGameMode === "kickoff_soccer";
