@@ -8026,7 +8026,7 @@ async function saveMatchResult(isWin, trophyChange) {
         }
 
         function initMatch() {
-          　gameState.status = "intro"; // ← 追加：1戦目の "ended" 状態をリセット
+            gameState.status = "intro"; // ← 追加：1戦目の "ended" 状態をリセット
             resizeCanvas();             // ← 追加：2戦目以降もキャンバスサイズを確実に再計算
           
             const isSoccer = selectedGameMode === "kickoff_soccer";
