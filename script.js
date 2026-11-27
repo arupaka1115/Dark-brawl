@@ -8,7 +8,7 @@ window.addEventListener("unhandledrejection", function(e) {
 const base = "https://www.gstatic.com/firebasejs/13.4.0/";
 const { initializeApp } = await import(base + "firebase-app.js");
 const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import(base + "firebase-auth.js");
-const { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot, serverTimestamp } = await import(base + "firebase-firestore.js");const firebaseConfig = {
+const { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot, serverTimestamp } = await import(base + "firebase-firestore.js");.js");const firebaseConfig = {
   apiKey: "AIzaSyCWWM4zIKbwNFZlicTAT8p_BvM_oC_9jyg",
   authDomain: "dark-brawl.firebaseapp.com",
   projectId: "dark-brawl",
