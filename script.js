@@ -852,6 +852,8 @@ async function saveMatchResult(isWin, trophyChange) {
             constructor() {
                 this.enabled = true;
                 this.initialized = false;
+                this.lastHitTime = 0;
+                this.lastGemTime = 0;
             }
 
             async init() {
@@ -884,9 +886,7 @@ async function saveMatchResult(isWin, trophyChange) {
                     this.gemSynth.volume.value = -8;
 
                     this.initialized = true;
-                } catch (e) {
-                    // 音声初期化失敗時は無音で継続
-                }
+                } catch (e) {}
             }
 
             toggle() {
@@ -906,7 +906,7 @@ async function saveMatchResult(isWin, trophyChange) {
                 if (!this.enabled || !this.initialized) return;
                 try {
                     const now = Tone.now();
-                    this.hitSynth.triggerAttackRelease("C3", "16n", now);
+                    this.hitSynth.triggerAttackRelease("C3", "16n", now + 0.002);
                     this.shootSynth.triggerAttackRelease(["A4", "E5"], "32n", now);
                 } catch (e) {}
             }
@@ -916,7 +916,7 @@ async function saveMatchResult(isWin, trophyChange) {
                 try {
                     const now = Tone.now();
                     this.dashNoise.triggerAttackRelease("16n", now);
-                    this.hitSynth.triggerAttackRelease("G1", "8n", now);
+                    this.hitSynth.triggerAttackRelease("G1", "8n", now + 0.002);
                     this.shootSynth.triggerAttackRelease(["D4", "A4", "F#5"], "16n", now);
                 } catch (e) {}
             }
@@ -924,7 +924,11 @@ async function saveMatchResult(isWin, trophyChange) {
             playHit() {
                 if (!this.enabled || !this.initialized) return;
                 try {
-                    this.hitSynth.triggerAttackRelease("G2", "32n");
+                    const now = Tone.now();
+                    // 単音シンセの連続発音衝突を防ぐ（0.04秒間隔）
+                    if (now - this.lastHitTime < 0.04) return;
+                    this.lastHitTime = now;
+                    this.hitSynth.triggerAttackRelease("G2", "32n", now + 0.002);
                 } catch (e) {}
             }
 
@@ -941,8 +945,10 @@ async function saveMatchResult(isWin, trophyChange) {
                 if (!this.enabled || !this.initialized) return;
                 try {
                     const now = Tone.now();
-                    this.gemSynth.triggerAttackRelease("B5", "32n", now);
-                    this.gemSynth.triggerAttackRelease("E6", "16n", now + 0.05);
+                    if (now - this.lastGemTime < 0.05) return;
+                    this.lastGemTime = now;
+                    this.gemSynth.triggerAttackRelease("B5", "32n", now + 0.002);
+                    this.gemSynth.triggerAttackRelease("E6", "16n", now + 0.055);
                 } catch (e) {}
             }
 
@@ -950,9 +956,9 @@ async function saveMatchResult(isWin, trophyChange) {
                 if (!this.enabled || !this.initialized) return;
                 try {
                     const now = Tone.now();
-                    this.gemSynth.triggerAttackRelease("E5", "32n", now);
-                    this.gemSynth.triggerAttackRelease("G#5", "32n", now + 0.06);
-                    this.gemSynth.triggerAttackRelease("B5", "16n", now + 0.12);
+                    this.gemSynth.triggerAttackRelease("E5", "32n", now + 0.005);
+                    this.gemSynth.triggerAttackRelease("G#5", "32n", now + 0.065);
+                    this.gemSynth.triggerAttackRelease("B5", "16n", now + 0.125);
                 } catch (e) {}
             }
 
@@ -970,8 +976,6 @@ async function saveMatchResult(isWin, trophyChange) {
                 } catch (e) {}
             }
         }
-
-        const sound = new SoundEngine();
 
         // ----------------------------------------------------------------------------
         // 2. Canvas & マップ定数・状態管理
