@@ -8,8 +8,7 @@ window.addEventListener("unhandledrejection", function(e) {
 const base = "https://www.gstatic.com/firebasejs/13.4.0/";
 const { initializeApp } = await import(base + "firebase-app.js");
 const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import(base + "firebase-auth.js");
-const { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot } = await import(base + "firebase-firestore.js");
-const firebaseConfig = {
+const { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot, serverTimestamp } = await import(base + "firebase-firestore.js");const firebaseConfig = {
   apiKey: "AIzaSyCWWM4zIKbwNFZlicTAT8p_BvM_oC_9jyg",
   authDomain: "dark-brawl.firebaseapp.com",
   projectId: "dark-brawl",
@@ -296,6 +295,245 @@ async function renderFriendsModal() {
       </div>
       <div class="text-right">
         <div class="text-sm font-black text-amber-300">🏆 ${m.trophies}</div>
+      </div>
+// ▼ ここから貼り付け（フェーズ2：オンライン状態表示対応版） ▼
+let unsubscribeUserDoc = null;
+let presenceTimer = null;
+let currentPresenceState = "online"; // "online" | "in_match"
+
+// 自分のステータスをFirestoreに送信（生存信号＋現在状態）
+async function updateMyPresence(status) {
+  if (!currentUser) return;
+  if (status) currentPresenceState = status;
+  try {
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      presence: currentPresenceState,
+      lastSeen: Date.now()
+    });
+  } catch (e) {}
+}
+
+// オンライン判定ヘルパー（40秒以内に通信があればオンライン扱い）
+function getFriendStatusBadge(userData) {
+  const lastSeen = userData.lastSeen || 0;
+  const isFresh = (Date.now() - lastSeen) < 40000;
+  if (!isFresh) {
+    return { text: "⚫ オフライン", cls: "text-slate-500", online: false };
+  }
+  if (userData.presence === "in_match") {
+    return { text: "⚔️ バトル中", cls: "text-amber-400 font-bold", online: true };
+  }
+  return { text: "🟢 オンライン", cls: "text-emerald-400 font-bold", online: true };
+}
+
+function initFriendRealtimeListener() {
+  if (!currentUser) return;
+  if (unsubscribeUserDoc) unsubscribeUserDoc();
+  if (presenceTimer) clearInterval(presenceTimer);
+
+  // ログイン直後にオンライン状態を送信＆20秒ごとに更新
+  updateMyPresence("online");
+  presenceTimer = setInterval(() => updateMyPresence(), 20000);
+
+  const label = document.getElementById("myFriendIdLabel");
+  if (label) label.textContent = `あなたの名前: ${playerStats.username}`;
+
+  unsubscribeUserDoc = onSnapshot(doc(db, "users", currentUser.uid), (snap) => {
+    if (!snap.exists()) return;
+    playerStats = snap.data();
+    const friends = playerStats.friends || [];
+    const requests = playerStats.friendRequests || [];
+
+    const countBadge = document.getElementById("homeFriendCountBadge");
+    if (countBadge) countBadge.textContent = `${friends.length}人`;
+
+    const badge = document.getElementById("friendBadge");
+    if (badge) {
+      if (requests.length > 0) {
+        badge.textContent = requests.length;
+        badge.classList.remove("hidden");
+      } else {
+        badge.classList.add("hidden");
+      }
+    }
+
+    const modal = document.getElementById("friendsModal");
+    if (modal && !modal.classList.contains("hidden")) {
+      renderFriendsModal();
+    }
+  });
+}
+
+async function sendFriendRequestByName(targetName) {
+  const msgEl = document.getElementById("friendSearchMsg");
+  const trimmed = targetName.trim();
+  if (!currentUser) {
+    msgEl.textContent = "ログインが必要です";
+    return;
+  }
+  if (!trimmed) {
+    msgEl.textContent = "ユーザー名を入力してください";
+    return;
+  }
+  if (trimmed === playerStats.username) {
+    msgEl.textContent = "自分自身には申請できません";
+    return;
+  }
+
+  try {
+    msgEl.textContent = "検索中...";
+    const q = query(collection(db, "users"), where("username", "==", trimmed));
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      msgEl.textContent = `「${trimmed}」というプレイヤーは見つかりませんでした`;
+      return;
+    }
+
+    const targetDoc = snap.docs[0];
+    const targetUid = targetDoc.id;
+    const myFriends = playerStats.friends || [];
+
+    if (myFriends.includes(targetUid)) {
+      msgEl.textContent = `「${trimmed}」さんはすでにフレンドです！`;
+      return;
+    }
+
+    await updateDoc(doc(db, "users", targetUid), {
+      friendRequests: arrayUnion(currentUser.uid)
+    });
+
+    msgEl.textContent = `✅ 「${trimmed}」さんにフレンド申請を送りました！`;
+    document.getElementById("friendSearchInput").value = "";
+  } catch (err) {
+    msgEl.textContent = "送信エラー: " + err.message;
+  }
+}
+
+window.acceptFriendRequest = async function(fromUid) {
+  if (!currentUser) return;
+  try {
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      friends: arrayUnion(fromUid),
+      friendRequests: arrayRemove(fromUid)
+    });
+    await updateDoc(doc(db, "users", fromUid), {
+      friends: arrayUnion(currentUser.uid)
+    });
+    renderFriendsModal();
+  } catch (err) {
+    alert("承認エラー: " + err.message);
+  }
+};
+
+window.declineFriendRequest = async function(fromUid) {
+  if (!currentUser) return;
+  try {
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      friendRequests: arrayRemove(fromUid)
+    });
+    renderFriendsModal();
+  } catch (err) {
+    alert("拒否エラー: " + err.message);
+  }
+};
+
+async function renderFriendsModal() {
+  if (!currentUser) return;
+  const reqSec = document.getElementById("friendRequestsSection");
+  const reqList = document.getElementById("friendRequestsList");
+  const reqCount = document.getElementById("friendReqCount");
+  const friendsListEl = document.getElementById("friendsList");
+
+  const requests = playerStats.friendRequests || [];
+  const friends = playerStats.friends || [];
+
+  if (requests.length > 0) {
+    reqSec.classList.remove("hidden");
+    reqCount.textContent = requests.length;
+    reqList.innerHTML = "";
+    for (const uid of requests) {
+      const uSnap = await getDoc(doc(db, "users", uid));
+      const uData = uSnap.exists() ? uSnap.data() : { username: "不明なプレイヤー", trophies: 0 };
+      const row = document.createElement("div");
+      row.className = "flex items-center justify-between bg-slate-950/90 border border-rose-500/40 rounded-2xl px-3.5 py-2.5";
+      row.innerHTML = `
+        <div>
+          <div class="text-sm font-black text-white">${uData.username}</div>
+          <div class="text-[11px] text-amber-300 font-bold">🏆 ${uData.trophies || 0}</div>
+        </div>
+        <div class="flex gap-1.5">
+          <button onclick="acceptFriendRequest('${uid}')" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black cursor-pointer">承認</button>
+          <button onclick="declineFriendRequest('${uid}')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer">拒否</button>
+        </div>
+      `;
+      reqList.appendChild(row);
+    }
+  } else {
+    reqSec.classList.add("hidden");
+  }
+
+  const memberProfiles = [{
+    uid: currentUser.uid,
+    isMe: true,
+    username: playerStats.username,
+    trophies: playerStats.trophies || 0,
+    wins: playerStats.wins || 0,
+    matches: playerStats.matches || 0,
+    statusInfo: getFriendStatusBadge({ presence: currentPresenceState, lastSeen: Date.now() })
+  }];
+
+  for (const fUid of friends) {
+    const fSnap = await getDoc(doc(db, "users", fUid));
+    if (fSnap.exists()) {
+      const d = fSnap.data();
+      memberProfiles.push({
+        uid: fUid,
+        isMe: false,
+        username: d.username,
+        trophies: d.trophies || 0,
+        wins: d.wins || 0,
+        matches: d.matches || 0,
+        statusInfo: getFriendStatusBadge(d)
+      });
+    }
+  }
+
+  memberProfiles.sort((a, b) => b.trophies - a.trophies);
+
+  if (friends.length === 0) {
+    friendsListEl.innerHTML = `<div class="text-center text-xs text-slate-400 py-6 bg-slate-950/50 rounded-2xl border border-slate-800">まだフレンドがいません。<br>上の検索欄から友達の名前を入力して申請しよう！</div>`;
+    return;
+  }
+
+  friendsListEl.innerHTML = "";
+  memberProfiles.forEach((m, idx) => {
+    const rankIcon = idx === 0 ? "👑" : `#${idx + 1}`;
+    const card = document.createElement("div");
+    card.className = `flex items-center justify-between rounded-2xl px-4 py-3 border ${
+      m.isMe ? "bg-cyan-950/40 border-cyan-400/60" : "bg-slate-950/90 border-slate-800"
+    }`;
+    card.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center font-black text-xs text-amber-300">
+          ${rankIcon}
+        </div>
+        <div>
+          <div class="text-sm font-black text-white flex items-center gap-1.5">
+            <span>${m.username}</span>
+            ${m.isMe ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">あなた</span>' : ''}
+          </div>
+          <div class="flex items-center gap-2 text-[11px] mt-0.5">
+            <span class="${m.statusInfo.cls}">${m.statusInfo.text}</span>
+            <span class="text-slate-500">|</span>
+            <span class="text-slate-400">勝利: <span class="text-emerald-400 font-bold">${m.wins}</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <div class="text-right">
+          <div class="text-sm font-black text-amber-300">🏆 ${m.trophies}</div>
+        </div>
       </div>
     `;
     friendsListEl.appendChild(card);
