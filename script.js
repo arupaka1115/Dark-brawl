@@ -1,3 +1,10 @@
+window.onerror = function(msg, url, line) {
+  alert("エラー発見: " + msg + " (" + line + "行目)");
+};
+window.addEventListener("unhandledrejection", function(e) {
+  alert("非同期エラー: " + e.reason);
+});
+
 const base = "https://www.gstatic.com/firebasejs/13.4.0/";
 const { initializeApp } = await import(base + "firebase-app.js");
 const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import(base + "firebase-auth.js");
