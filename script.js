@@ -5123,7 +5123,7 @@ document.getElementById("refreshFriendsBtn")?.addEventListener("click", () => {
 
         function finishMatch(playerWon) {
             gameState.status = "ended";
-          　if (typeof updateMyPresence === "function") updateMyPresence("online");
+            if (typeof updateMyPresence === "function") updateMyPresence("online");
             sound.playEnd(playerWon);
 
           // ▼ 戦績をFirestoreにクラウド保存（勝利: +8 / 敗北: -4）
