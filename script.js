@@ -1,11 +1,6 @@
 const { db, auth, doc, setDoc, getDoc, updateDoc, increment, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot } = window.firebaseExports || {};
-let currentUser = null;
-let playerStats = { username: "", trophies: 0, wins: 0, matches: 0 };
-  initFriendRealtimeListener();
-  alert(`ようこそ ${playerStats.username} さん！\nトロフィー: ${playerStats.trophies} / 勝利数: ${playerStats.wins}`);
-}
-
-async function saveMatchResult(isWin, trophyChange) {
+let currentUser = window.currentUser || null;
+let playerStats = window.playerStats || { username: "", trophies: 0, wins: 0, matches: 0 };async function saveMatchResult(isWin, trophyChange) {
   if (!currentUser) return;
 
   playerStats.trophies = Math.max(0, playerStats.trophies + trophyChange);
