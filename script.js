@@ -312,6 +312,7 @@ async function renderFriendsModal() {
       m.isMe ? "bg-cyan-950/40 border-cyan-400/60" : "bg-slate-950/90 border-slate-800"
     }`;
     card.innerHTML = `
+      card.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center font-black text-xs text-amber-300">
           ${rankIcon}
@@ -332,6 +333,11 @@ async function renderFriendsModal() {
         <div class="text-right">
           <div class="text-sm font-black text-amber-300">🏆 ${m.trophies}</div>
         </div>
+        ${(!m.isMe && m.statusInfo.online && currentPresenceState === "online") ? `
+          <button onclick="inviteFriendToCoop('${m.uid}', '${m.username}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-b from-emerald-400 to-teal-600 text-slate-950 font-black text-xs shadow hover:brightness-110 cursor-pointer">
+            📩 招待
+          </button>
+        ` : ''}
       </div>
     `;
     friendsListEl.appendChild(card);
@@ -351,6 +357,370 @@ document.getElementById("friendSearchBtn")?.addEventListener("click", () => {
   sendFriendRequestByName(val);
 });
 document.getElementById("refreshFriendsBtn")?.addEventListener("click", () => {
+// ============================================================================
+// フェーズ3：フレンド協力マルチプレイシステム（ルーム招待・ロビー・リアルタイム同期）
+// ============================================================================
+let coopState = {
+  active: false,
+  roomId: null,
+  role: null, // "host" | "guest"
+  roomData: null,
+  unsubscribeRoom: null,
+  syncTimer: null,
+  lastRemoteFireTs: 0,
+  lastRemoteUltTs: 0
+};
+
+const MODE_LABELS = {
+  diamond_hunt: "💎 ダイヤモンドハント",
+  kickoff_soccer: "⚽ キックオフサッカー",
+  danger_zone: "☣️ 危険地帯",
+  knockout: "💀 ノックアウト"
+};
+
+// ユーザードキュメント監視に「招待受信チェック」を追加（onSnapshot内から呼ばれる）
+function handleIncomingCoopInvite(userData) {
+  const invite = userData.coopInvite;
+  const banner = document.getElementById("coopInviteBanner");
+  const textEl = document.getElementById("coopInviteText");
+  if (!banner || !textEl) return;
+
+  if (invite && invite.roomId && !coopState.active && currentPresenceState === "online") {
+    // 60秒以内の新しい招待のみ表示
+    if (Date.now() - (invite.createdAt || 0) < 60000) {
+      textEl.textContent = `${invite.fromName} さんから協力バトルの招待！`;
+      banner.dataset.roomId = invite.roomId;
+      banner.classList.remove("hidden");
+      return;
+    }
+  }
+  banner.classList.add("hidden");
+}
+
+// フレンドを協力ルームに招待する（ホスト作成）
+window.inviteFriendToCoop = async function(friendUid, friendName) {
+  if (!currentUser) return;
+  try {
+    const roomId = `coop_${currentUser.uid}_${Date.now()}`;
+    const myCharId = typeof selectedData !== "undefined" ? selectedData.id : "blaze";
+    const myCharName = typeof selectedData !== "undefined" ? selectedData.name : "ブレイズ";
+    const mode = typeof selectedGameMode !== "undefined" ? selectedGameMode : "diamond_hunt";
+
+    const initialRoom = {
+      status: "lobby", // "lobby" | "playing" | "ended"
+      mode: mode,
+      host: {
+        uid: currentUser.uid,
+        name: playerStats.username,
+        charId: myCharId,
+        charName: myCharName,
+        ready: true
+      },
+      guest: {
+        uid: friendUid,
+        name: friendName,
+        charId: "saital",
+        charName: "ミコト",
+        joined: false,
+        ready: false
+      },
+      hostState: null,
+      guestState: null,
+      updatedAt: Date.now()
+    };
+
+    await setDoc(doc(db, "rooms", roomId), initialRoom);
+
+    // 相手のユーザードキュメントに招待情報を書き込む
+    await updateDoc(doc(db, "users", friendUid), {
+      coopInvite: {
+        roomId: roomId,
+        fromUid: currentUser.uid,
+        fromName: playerStats.username,
+        createdAt: Date.now()
+      }
+    });
+
+    document.getElementById("friendsModal")?.classList.add("hidden");
+    enterCoopRoom(roomId, "host");
+  } catch (err) {
+    alert("招待エラー: " + err.message);
+  }
+};
+
+// 招待を承認してルームに参加
+document.getElementById("acceptCoopInviteBtn")?.addEventListener("click", async () => {
+  const banner = document.getElementById("coopInviteBanner");
+  const roomId = banner?.dataset.roomId;
+  if (!roomId || !currentUser) return;
+
+  try {
+    banner.classList.add("hidden");
+    await updateDoc(doc(db, "users", currentUser.uid), { coopInvite: null });
+
+    const myCharId = typeof selectedData !== "undefined" ? selectedData.id : "saital";
+    const myCharName = typeof selectedData !== "undefined" ? selectedData.name : "ミコト";
+
+    await updateDoc(doc(db, "rooms", roomId), {
+      "guest.joined": true,
+      "guest.ready": false,
+      "guest.charId": myCharId,
+      "guest.charName": myCharName
+    });
+
+    enterCoopRoom(roomId, "guest");
+  } catch (err) {
+    alert("ルーム参加エラー: " + err.message);
+  }
+});
+
+// 招待を辞退
+document.getElementById("declineCoopInviteBtn")?.addEventListener("click", async () => {
+  const banner = document.getElementById("coopInviteBanner");
+  if (banner) banner.classList.add("hidden");
+  if (currentUser) {
+    await updateDoc(doc(db, "users", currentUser.uid), { coopInvite: null });
+  }
+});
+
+// 協力ルーム入室＆リアルタイム監視開始
+function enterCoopRoom(roomId, role) {
+  leaveCoopRoom(false);
+  coopState.active = true;
+  coopState.roomId = roomId;
+  coopState.role = role;
+
+  const modal = document.getElementById("coopRoomModal");
+  modal?.classList.remove("hidden");
+
+  const modeSelect = document.getElementById("coopRoomModeSelect");
+  const readyBtn = document.getElementById("coopReadyToggleBtn");
+  const startBtn = document.getElementById("coopStartMatchBtn");
+
+  if (role === "host") {
+    modeSelect?.classList.remove("hidden");
+    startBtn?.classList.remove("hidden");
+    readyBtn?.classList.add("hidden");
+  } else {
+    modeSelect?.classList.add("hidden");
+    startBtn?.classList.add("hidden");
+    readyBtn?.classList.remove("hidden");
+  }
+
+  coopState.unsubscribeRoom = onSnapshot(doc(db, "rooms", roomId), (snap) => {
+    if (!snap.exists()) {
+      alert("ルームが解散されました。");
+      leaveCoopRoom(false);
+      return;
+    }
+    const data = snap.data();
+    coopState.roomData = data;
+
+    if (data.status === "closed") {
+      alert("ホストがルームを解散しました。");
+      leaveCoopRoom(false);
+      return;
+    }
+
+    // ロビー表示の更新
+    renderCoopLobbyUI(data);
+
+    // ホストが試合を開始したら、両方の画面で同時に試合スタート！
+    if (data.status === "playing" && gameState.status !== "intro" && gameState.status !== "playing") {
+      modal?.classList.add("hidden");
+      if (typeof selectGameMode === "function") {
+        selectGameMode(data.mode, false);
+      }
+      if (typeof startGame === "function") {
+        startGame();
+      } else {
+        document.getElementById("homeScreen")?.classList.add("hidden");
+        document.getElementById("hudLayer")?.classList.remove("hidden");
+        initMatch();
+      }
+      startCoopBattleSync();
+    }
+
+    // バトル中のリアルタイム座標・HP・アクション受信
+    if (data.status === "playing" && (gameState.status === "intro" || gameState.status === "playing")) {
+      applyRemoteCoopPacket(data);
+    }
+  });
+}
+
+function renderCoopLobbyUI(data) {
+  const modeLabel = document.getElementById("coopRoomModeLabel");
+  const modeSelect = document.getElementById("coopRoomModeSelect");
+  const hostSlot = document.getElementById("coopHostSlot");
+  const guestSlot = document.getElementById("coopGuestSlot");
+  const statusMsg = document.getElementById("coopRoomStatusMsg");
+  const startBtn = document.getElementById("coopStartMatchBtn");
+  const readyBtn = document.getElementById("coopReadyToggleBtn");
+
+  if (modeLabel) modeLabel.textContent = MODE_LABELS[data.mode] || data.mode;
+  if (modeSelect && coopState.role === "host") modeSelect.value = data.mode;
+
+  if (hostSlot) {
+    hostSlot.innerHTML = `
+      <div class="flex items-center gap-2.5">
+        <span class="text-lg">👑</span>
+        <div>
+          <div class="text-sm font-black text-white">${data.host.name} <span class="text-[10px] text-cyan-300">(ホスト)</span></div>
+          <div class="text-[11px] text-cyan-200">使用キャラ: <b>${data.host.charName}</b></div>
+        </div>
+      </div>
+      <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-black">READY</span>
+    `;
+  }
+
+  if (guestSlot) {
+    if (!data.guest.joined) {
+      guestSlot.innerHTML = `
+        <div class="flex items-center gap-2.5">
+          <span class="text-lg animate-pulse">⏳</span>
+          <div>
+            <div class="text-sm font-black text-slate-300">${data.guest.name} を招待中...</div>
+            <div class="text-[11px] text-slate-500">相手が「参加する」を押すのを待っています</div>
+          </div>
+        </div>
+        <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold">待機中</span>
+      `;
+    } else {
+      guestSlot.innerHTML = `
+        <div class="flex items-center gap-2.5">
+          <span class="text-lg">🤝</span>
+          <div>
+            <div class="text-sm font-black text-white">${data.guest.name} <span class="text-[10px] text-emerald-300">(フレンド)</span></div>
+            <div class="text-[11px] text-emerald-200">使用キャラ: <b>${data.guest.charName}</b></div>
+          </div>
+        </div>
+        <span class="px-2.5 py-1 rounded-lg ${data.guest.ready ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40" : "bg-amber-500/20 text-amber-300 border border-amber-500/40"} text-xs font-black">
+          ${data.guest.ready ? "READY!" : "準備中..."}
+        </span>
+      `;
+    }
+  }
+
+  if (coopState.role === "host") {
+    const canStart = data.guest.joined && data.guest.ready;
+    if (startBtn) {
+      startBtn.disabled = !canStart;
+      startBtn.classList.toggle("opacity-40", !canStart);
+    }
+    if (statusMsg) {
+      statusMsg.textContent = !data.guest.joined
+        ? "フレンドの参加を待っています..."
+        : !data.guest.ready
+        ? "フレンドが「準備OK」を押すと開始できます！"
+        : "✅ 全員準備完了！「協力バトル開始！」を押してください！";
+    }
+  } else {
+    if (readyBtn) {
+      readyBtn.textContent = data.guest.ready ? "⏸ 準備を解除する" : "✋ 準備OKにする";
+    }
+    if (statusMsg) {
+      statusMsg.textContent = data.guest.ready
+        ? "ホストがバトルを開始するのを待っています..."
+        : "準備ができたら「準備OKにする」を押してください！";
+    }
+  }
+}
+
+// ホストがモード変更
+document.getElementById("coopRoomModeSelect")?.addEventListener("change", async (e) => {
+  if (!coopState.active || coopState.role !== "host") return;
+  await updateDoc(doc(db, "rooms", coopState.roomId), { mode: e.target.value });
+});
+
+// ゲストが準備OK切り替え
+document.getElementById("coopReadyToggleBtn")?.addEventListener("click", async () => {
+  if (!coopState.active || coopState.role !== "guest" || !coopState.roomData) return;
+  const nextReady = !coopState.roomData.guest.ready;
+  await updateDoc(doc(db, "rooms", coopState.roomId), { "guest.ready": nextReady });
+});
+
+// ホストがバトル開始ボタンを押下
+document.getElementById("coopStartMatchBtn")?.addEventListener("click", async () => {
+  if (!coopState.active || coopState.role !== "host" || !coopState.roomData) return;
+  if (!coopState.roomData.guest.joined || !coopState.roomData.guest.ready) return;
+  await updateDoc(doc(db, "rooms", coopState.roomId), { status: "playing" });
+});
+
+// ルーム退出 / 解散
+async function leaveCoopRoom(notifyFirestore = true) {
+  if (coopState.syncTimer) clearInterval(coopState.syncTimer);
+  if (coopState.unsubscribeRoom) coopState.unsubscribeRoom();
+  const prevRoomId = coopState.roomId;
+  const prevRole = coopState.role;
+
+  coopState.active = false;
+  coopState.roomId = null;
+  coopState.role = null;
+  coopState.roomData = null;
+  coopState.syncTimer = null;
+  coopState.unsubscribeRoom = null;
+
+  document.getElementById("coopRoomModal")?.classList.add("hidden");
+
+  if (notifyFirestore && prevRoomId) {
+    try {
+      if (prevRole === "host") {
+        await updateDoc(doc(db, "rooms", prevRoomId), { status: "closed" });
+      } else {
+        await updateDoc(doc(db, "rooms", prevRoomId), { "guest.joined": false, "guest.ready": false });
+      }
+    } catch (e) {}
+  }
+}
+
+document.getElementById("leaveCoopRoomBtn")?.addEventListener("click", () => leaveCoopRoom(true));
+
+// バトル中のリアルタイム同期（100msごとに自分の座標・向き・HPを送信）
+function startCoopBattleSync() {
+  if (coopState.syncTimer) clearInterval(coopState.syncTimer);
+  coopState.syncTimer = setInterval(async () => {
+    if (!coopState.active || !coopState.roomId || gameState.status === "ended") return;
+    const me = gameState.entities.find((e) => e.isPlayer);
+    if (!me) return;
+
+    const field = coopState.role === "host" ? "hostState" : "guestState";
+    try {
+      await updateDoc(doc(db, "rooms", coopState.roomId), {
+        [field]: {
+          x: Math.round(me.x),
+          y: Math.round(me.y),
+          vx: Math.round(me.vx),
+          vy: Math.round(me.vy),
+          angle: Number(me.facingAngle.toFixed(2)),
+          hp: Math.round(me.hp),
+          dead: !!me.dead,
+          gems: me.gems || 0
+        }
+      });
+    } catch (e) {}
+  }, 100);
+}
+
+// フレンドの最新位置を自分の画面の「フレンドキャラ（isCoopFriend）」に反映
+function applyRemoteCoopPacket(data) {
+  const remote = coopState.role === "host" ? data.guestState : data.hostState;
+  if (!remote) return;
+  const friendEntity = gameState.entities.find((e) => e.isCoopFriend);
+  if (!friendEntity) return;
+
+  // スムーズに座標を補間して反映
+  friendEntity.x += (remote.x - friendEntity.x) * 0.45;
+  friendEntity.y += (remote.y - friendEntity.y) * 0.45;
+  friendEntity.vx = remote.vx;
+  friendEntity.vy = remote.vy;
+  friendEntity.facingAngle = remote.angle;
+  friendEntity.hp = remote.hp;
+  friendEntity.dead = remote.dead;
+  friendEntity.gems = remote.gems;
+  if (Math.hypot(remote.vx, remote.vy) > 5) {
+    friendEntity.walkAnim += 0.25;
+  }
+}
   renderFriendsModal();
 });
         // ----------------------------------------------------------------------------
