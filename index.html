@@ -425,7 +425,81 @@
         </div>
     </div>
     <!-- ▲ ここまで貼り付け ▲ -->
+<!-- 届いた協力バトル招待ポップアップ -->
+    <div id="coopInviteBanner" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-[92%] max-w-md bg-slate-900/95 border-2 border-amber-400 rounded-2xl p-4 shadow-[0_0_30px_rgba(251,191,36,0.4)] backdrop-blur-md">
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <div class="text-[11px] font-black text-amber-400 tracking-wider">📩 協力バトルの招待！</div>
+                <div id="coopInviteText" class="text-sm font-black text-white mt-0.5">--- さんから招待が届きました</div>
+            </div>
+            <div class="flex gap-1.5 shrink-0">
+                <button id="acceptCoopInviteBtn" type="button" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs cursor-pointer">参加する</button>
+                <button id="declineCoopInviteBtn" type="button" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs cursor-pointer">辞退</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- 協力マルチパーティールーム（ロビー画面） -->
+    <div id="coopRoomModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+        <div class="w-full max-w-xl bg-slate-900 border-2 border-emerald-400/70 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="px-5 py-4 bg-gradient-to-r from-slate-950 via-emerald-950/50 to-slate-950 border-b border-slate-700 flex items-center justify-between">
+                <div>
+                    <div class="text-[11px] font-black text-emerald-400 tracking-widest">CO-OP MULTIPLAYER LOBBY</div>
+                    <h2 class="text-lg sm:text-xl font-black text-white">🤝 フレンド協力パーティー</h2>
+                </div>
+                <button id="leaveCoopRoomBtn" type="button" class="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/50 text-xs font-black transition cursor-pointer">解散 / 退出</button>
+            </div>
+
+            <div class="p-5 space-y-4">
+                <!-- モード表示・選択（ホストのみ変更可） -->
+                <div class="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between">
+                    <div>
+                        <div class="text-[11px] text-slate-400 font-bold">バトルモード（対AI協力戦）</div>
+                        <div id="coopRoomModeLabel" class="text-sm font-black text-amber-300">ダイヤモンドハント</div>
+                    </div>
+                    <select id="coopRoomModeSelect" class="hidden bg-slate-800 border border-slate-600 text-white text-xs font-bold rounded-xl px-3 py-2 outline-none">
+                        <option value="diamond_hunt">💎 ダイヤモンドハント</option>
+                        <option value="kickoff_soccer">⚽ キックオフサッカー</option>
+                        <option value="danger_zone">☣️ 危険地帯</option>
+                        <option value="knockout">💀 ノックアウト</option>
+                    </select>
+                </div>
+
+                <!-- チームメンバー枠（青チーム3人） -->
+                <div class="space-y-2.5">
+                    <div class="text-xs font-black text-cyan-300">🔵 青チーム編成（3 vs 3 AI協力戦）</div>
+                    <!-- ホスト枠 -->
+                    <div id="coopHostSlot" class="flex items-center justify-between bg-cyan-950/40 border border-cyan-400/60 rounded-2xl px-4 py-3"></div>
+                    <!-- ゲスト枠 -->
+                    <div id="coopGuestSlot" class="flex items-center justify-between bg-slate-950/90 border border-slate-700 rounded-2xl px-4 py-3"></div>
+                    <!-- 味方AI枠 -->
+                    <div class="flex items-center justify-between bg-slate-950/50 border border-slate-800/80 rounded-2xl px-4 py-2.5 opacity-80">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-base">🤖</span>
+                            <div>
+                                <div class="text-xs font-black text-slate-300">味方AIサポート（自動編成）</div>
+                                <div class="text-[10px] text-slate-500">3人目として自動で参戦します</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-400 px-2 py-0.5 rounded bg-slate-800">AI READY</span>
+                    </div>
+                </div>
+
+                <p id="coopRoomStatusMsg" class="text-center text-xs font-bold text-amber-300 min-h-[18px]"></p>
+
+                <!-- アクションボタン -->
+                <div class="flex gap-2.5 pt-1">
+                    <button id="coopReadyToggleBtn" type="button" class="hidden flex-1 py-3.5 rounded-2xl bg-gradient-to-b from-cyan-400 to-blue-600 text-slate-950 font-black text-sm shadow-lg hover:brightness-110 transition cursor-pointer">
+                        ✋ 準備OKにする
+                    </button>
+                    <button id="coopStartMatchBtn" type="button" class="hidden flex-1 py-3.5 rounded-2xl bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 text-slate-950 font-black text-base shadow-lg hover:brightness-110 transition cursor-pointer">
+                        ⚔️ 協力バトル開始！
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script type="module" src="script.js"></script>
 </body>
 </html>
