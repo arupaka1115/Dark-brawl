@@ -139,6 +139,7 @@ function initFriendRealtimeListener() {
   unsubscribeUserDoc = onSnapshot(doc(db, "users", currentUser.uid), (snap) => {
     if (!snap.exists()) return;
     playerStats = snap.data();
+    handleIncomingCoopInvite(playerStats);
     const friends = playerStats.friends || [];
     const requests = playerStats.friendRequests || [];
 
