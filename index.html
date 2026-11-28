@@ -531,6 +531,25 @@ window.playerStats = { username: "", trophies: 0, wins: 0, matches: 0 };
 
 const toEmail = (name) => `${name.trim()}@darkbrawl.local`;
 
+// ログイン・登録完了後に script.js 側のアカウント情報・フレンド・招待機能を反映する共通関数
+function onAuthSuccess(user, stats) {
+  window.currentUser = user;
+  window.playerStats = stats;
+  document.getElementById("authScreen").style.display = "none";
+
+  // 画面上のユーザー名・トロフィー表示を更新
+  const nameEl = document.getElementById("playerNameDisplay") || document.getElementById("lobbyUsername");
+  if (nameEl) nameEl.textContent = stats.username || "PLAYER";
+  const trophyEl = document.getElementById("playerTrophyDisplay") || document.getElementById("lobbyTrophies");
+  if (trophyEl) trophyEl.textContent = stats.trophies ?? 0;
+
+  // script.js 側の初期化・フレンド・招待リスナーを起動
+  if (typeof window.onUserLoggedIn === "function") window.onUserLoggedIn(user, stats);
+  if (typeof window.initFriendRealtimeListener === "function") window.initFriendRealtimeListener();
+  if (typeof window.initInviteListener === "function") window.initInviteListener();
+  if (typeof window.updateLobbyUI === "function") window.updateLobbyUI();
+}
+
 document.getElementById("registerBtn").onclick = async () => {
   const name = document.getElementById("usernameInput").value;
   const pass = document.getElementById("passwordInput").value;
@@ -542,11 +561,9 @@ document.getElementById("registerBtn").onclick = async () => {
   try {
     msg.textContent = "登録中...";
     const cred = await createUserWithEmailAndPassword(auth, toEmail(name), pass);
-    window.currentUser = cred.user;
-    window.playerStats = { username: name.trim(), trophies: 0, wins: 0, matches: 0 };
-    await setDoc(doc(db, "users", window.currentUser.uid), window.playerStats);
-    document.getElementById("authScreen").style.display = "none";
-    if (typeof window.initFriendRealtimeListener === "function") window.initFriendRealtimeListener();
+    const stats = { username: name.trim(), trophies: 0, wins: 0, matches: 0, friends: [], friendRequests: [] };
+    await setDoc(doc(db, "users", cred.user.uid), stats);
+    onAuthSuccess(cred.user, stats);
   } catch (e) {
     msg.textContent = "エラー: " + e.message;
   }
@@ -559,21 +576,20 @@ document.getElementById("loginBtn").onclick = async () => {
   try {
     msg.textContent = "ログイン中...";
     const cred = await signInWithEmailAndPassword(auth, toEmail(name), pass);
-    window.currentUser = cred.user;
-    const snap = await getDoc(doc(db, "users", window.currentUser.uid));
-    if (snap.exists()) window.playerStats = snap.data();
-    document.getElementById("authScreen").style.display = "none";
-    if (typeof window.initFriendRealtimeListener === "function") window.initFriendRealtimeListener();
+    const snap = await getDoc(doc(db, "users", cred.user.uid));
+    const stats = snap.exists() ? snap.data() : { username: name.trim(), trophies: 0, wins: 0, matches: 0 };
+    onAuthSuccess(cred.user, stats);
   } catch (e) {
     msg.textContent = "エラー: " + e.message;
   }
 };
 
-window.onerror = (msg, src, line) => {
-  alert(`エラー (${line}行目): ${msg}`);
-};
-
-import("./script.js?v=" + Date.now()).catch(e => {
+import("./script.js?v=" + Date.now()).then(() => {
+  // script.js の読み込み完了後にすでにログイン済みなら再反映する
+  if (window.currentUser) {
+    onAuthSuccess(window.currentUser, window.playerStats);
+  }
+}).catch(e => {
   document.getElementById("authMessage").textContent = "script.jsエラー: " + e.message;
 });
 </script>
