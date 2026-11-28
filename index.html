@@ -5,19 +5,22 @@
 fetch("script.js?v=" + Date.now())
   .then(r => r.text())
   .then(code => {
-    const lines = code.split("\n");
-    // 150行目〜1000行目付近の怪しい記号（全角スペース、閉じ忘れ、孤立した } など）を検出
-    for (let i = 140; i < Math.min(1000, lines.length); i++) {
-      if (/[ ]/.test(lines[i])) {
-        alert((i + 1) + "行目に全角スペースがあります:\n" + lines[i]);
-      }
-    }
-    // 動的importでブラウザのネイティブエラー行番号を直接取得
-    const blob = new Blob([code], { type: "application/javascript" });
-    const url = URL.createObjectURL(blob);
-    import(url).catch(e => {
-      alert("ネイティブエラー:\n" + e.message + "\n行情報: " + (e.line || e.lineNumber || e.stack));
-    });
+    // 文字列("")やコメント(//)以外の場所にある全角スペースを自動検出＆置換
+    const fixed = code.replace(/^[ ]+/gm, m => "  ".repeat(m.length))
+                      .replace(/([;{}(),=])\s*[ ]+\s*/g, "$1 ");
+    const blob = new Blob([fixed], { type: "application/javascript" });
+    import(URL.createObjectURL(blob))
+      .then(() => {
+        if (fixed !== code) {
+          alert("✅ 全角スペースを自動修正したらエラーが消えました！\nこのあと修正済みコードをクリップボードにコピーします。");
+          navigator.clipboard?.writeText(fixed);
+        } else {
+          alert("✅ 構文エラーなし！正常に読み込めています");
+        }
+      })
+      .catch(e => {
+        alert("❌ まだ別の構文エラーがあります:\n" + e.message);
+      });
   });
 </script>
     <link rel="stylesheet" href="style.css">
