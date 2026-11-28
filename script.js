@@ -8583,6 +8583,7 @@ document.getElementById("refreshFriendsBtn")?.addEventListener("click", () => {
             bootGame();
         } else {
             window.addEventListener("load", bootGame);
+        }
 // ============================================================================
 // フェーズ3：フレンド協力マルチプレイシステム（名前重複ゼロ・完全独立版）
 // ============================================================================
