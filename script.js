@@ -8940,4 +8940,3 @@ function applyRemoteCoopPacket(data) {
   }
 }
         }
-                                                               }
