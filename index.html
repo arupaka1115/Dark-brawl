@@ -586,7 +586,7 @@ fetch("script.js?nocache=" + Date.now())
         new Function(chunk);
         low = mid + 1;
       } catch (e) {
-        if (e.message.includes("Unexpected end") || e.message.includes("Unterminated")) {
+        if (e.message.includes("Unexpected end") || e.message.includes("Unexpected EOF") || e.message.includes("Unterminated")) {
           low = mid + 1;
         } else {
           badLine = mid;
