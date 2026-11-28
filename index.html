@@ -1,39 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<script>
-(async () => {
-  const out = document.getElementById("authMessage");
-  if (!out) return;
-  out.style.color = "#ffa801";
-  out.textContent = "🔍 script.js を検査中...";
-
-  try {
-    const res = await fetch("script.js?v=" + Date.now());
-    const code = await res.text();
-    const badLines = [];
-
-    code.split("\n").forEach((line, idx) => {
-      const stripped = line.replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '""').replace(/\/\/.*$/, "");
-      if (/ /.test(stripped)) {
-        badLines.push((idx + 1) + "行目: " + line.trim());
-      }
-    });
-
-    if (badLines.length > 0) {
-      out.style.color = "#ff5e57";
-      out.style.textAlign = "left";
-      out.style.fontSize = "12px";
-      out.innerHTML = "<b>全角スペース検出 (" + badLines.length + "件):</b><br>" + badLines.slice(0, 10).join("<br>");
-    } else {
-      out.style.color = "#2ed573";
-      out.textContent = "✅ 全角スペース0件！別の構文エラーを確認中...";
-    }
-  } catch (e) {
-    out.textContent = "検査エラー: " + e.message;
-  }
-})();
-</script>
     <link rel="stylesheet" href="style.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -533,5 +500,76 @@
         </div>
     </div>
     <script type="module" src="script.js"></script>
+  <script type="module">
+const base = "https://www.gstatic.com/firebasejs/13.4.0/";
+const { initializeApp } = await import(base + "firebase-app.js");
+const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import(base + "firebase-auth.js");
+const { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot } = await import(base + "firebase-firestore.js");
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCWWM4zIKbwNFZlicTAT8p_BvM_oC_9jyg",
+  authDomain: "dark-brawl.firebaseapp.com",
+  projectId: "dark-brawl",
+  storageBucket: "dark-brawl.firebasestorage.app",
+  messagingSenderId: "995605284599",
+  appId: "1:995605284599:web:568d3340a58d01295435f2",
+  measurementId: "G-LQWKMQC0ZV"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+window._coopDb = db;
+window._coopAuth = auth;
+window._coopDoc = doc;
+window._coopSetDoc = setDoc;
+window._coopUpdateDoc = updateDoc;
+window._coopOnSnapshot = onSnapshot;
+window.firebaseExports = { db, auth, doc, setDoc, getDoc, updateDoc, increment, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot };
+
+window.currentUser = null;
+window.playerStats = { username: "", trophies: 0, wins: 0, matches: 0 };
+
+const toEmail = (name) => `${name.trim()}@darkbrawl.local`;
+
+document.getElementById("registerBtn").onclick = async () => {
+  const name = document.getElementById("usernameInput").value;
+  const pass = document.getElementById("passwordInput").value;
+  const msg = document.getElementById("authMessage");
+  if (!name || pass.length < 6) {
+    msg.textContent = "英数字の名前と6文字以上のパスワードを入力してください";
+    return;
+  }
+  try {
+    msg.textContent = "登録中...";
+    const cred = await createUserWithEmailAndPassword(auth, toEmail(name), pass);
+    window.currentUser = cred.user;
+    window.playerStats = { username: name.trim(), trophies: 0, wins: 0, matches: 0 };
+    await setDoc(doc(db, "users", window.currentUser.uid), window.playerStats);
+    document.getElementById("authScreen").style.display = "none";
+    if (typeof window.initFriendRealtimeListener === "function") window.initFriendRealtimeListener();
+  } catch (e) {
+    msg.textContent = "エラー: " + e.message;
+  }
+};
+
+document.getElementById("loginBtn").onclick = async () => {
+  const name = document.getElementById("usernameInput").value;
+  const pass = document.getElementById("passwordInput").value;
+  const msg = document.getElementById("authMessage");
+  try {
+    msg.textContent = "ログイン中...";
+    const cred = await signInWithEmailAndPassword(auth, toEmail(name), pass);
+    window.currentUser = cred.user;
+    const snap = await getDoc(doc(db, "users", window.currentUser.uid));
+    if (snap.exists()) window.playerStats = snap.data();
+    document.getElementById("authScreen").style.display = "none";
+    if (typeof window.initFriendRealtimeListener === "function") window.initFriendRealtimeListener();
+  } catch (e) {
+    msg.textContent = "エラー: " + e.message;
+  }
+};
+</script>
 </body>
 </html>
