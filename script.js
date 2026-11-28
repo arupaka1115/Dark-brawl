@@ -8932,4 +8932,3 @@ function applyRemoteCoopPacket(data) {
     friendEntity.walkAnim += 0.25;
   }
 }
-        }
