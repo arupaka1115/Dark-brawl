@@ -6,19 +6,18 @@ fetch("script.js?v=" + Date.now())
   .then(r => r.text())
   .then(code => {
     const lines = code.split("\n");
-    // 1000行ずつ区切ってどこまで構文が通るかチェック
-    for (let end = 1000; end <= lines.length + 1000; end += 1000) {
-      const slice = lines.slice(0, end).join("\n").replace(/\bawait\b/g, "");
-      try {
-        new Function(slice);
-      } catch (e) {
-        if (!e.message.includes("Unexpected end")) {
-          alert("エラーはこの範囲にあります: " + Math.max(1, end - 1000) + "行目 〜 " + Math.min(lines.length, end) + "行目\n内容: " + e.message);
-          return;
-        }
+    // 150行目〜1000行目付近の怪しい記号（全角スペース、閉じ忘れ、孤立した } など）を検出
+    for (let i = 140; i < Math.min(1000, lines.length); i++) {
+      if (/[ ]/.test(lines[i])) {
+        alert((i + 1) + "行目に全角スペースがあります:\n" + lines[i]);
       }
     }
-    alert("途中の行には明確なエラーなし（ファイル末尾の閉じ忘れの可能性）");
+    // 動的importでブラウザのネイティブエラー行番号を直接取得
+    const blob = new Blob([code], { type: "application/javascript" });
+    const url = URL.createObjectURL(blob);
+    import(url).catch(e => {
+      alert("ネイティブエラー:\n" + e.message + "\n行情報: " + (e.line || e.lineNumber || e.stack));
+    });
   });
 </script>
     <link rel="stylesheet" href="style.css">
