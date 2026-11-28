@@ -61,6 +61,7 @@ document.getElementById("registerBtn").addEventListener("click", async () => {
   }
 });
 
+alert("JS正常読み込み完了！");
 document.getElementById("loginBtn").addEventListener("click", async () => {
   const name = document.getElementById("usernameInput").value;
   const pass = document.getElementById("passwordInput").value;
