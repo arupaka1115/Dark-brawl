@@ -499,12 +499,10 @@
             </div>
         </div>
     </div>
-    <script type="module" src="script.js"></script>
-  <script type="module">
-const base = "https://www.gstatic.com/firebasejs/13.4.0/";
-const { initializeApp } = await import(base + "firebase-app.js");
-const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import(base + "firebase-auth.js");
-const { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot } = await import(base + "firebase-firestore.js");
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection, query, where, getDocs, arrayUnion, arrayRemove, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCWWM4zIKbwNFZlicTAT8p_BvM_oC_9jyg",
@@ -570,6 +568,11 @@ document.getElementById("loginBtn").onclick = async () => {
     msg.textContent = "エラー: " + e.message;
   }
 };
+
+// Firebase準備完了後にゲーム本体(script.js)を読み込む
+import("./script.js?v=" + Date.now()).catch(e => {
+  document.getElementById("authMessage").textContent = "script.jsエラー: " + e.message;
+});
 </script>
 </body>
 </html>
