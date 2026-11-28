@@ -8580,12 +8580,12 @@ document.getElementById("refreshFriendsBtn")?.addEventListener("click", () => {
 // ============================================================================
 // フェーズ3：フレンド協力マルチプレイシステム（名前重複ゼロ・完全独立版）
 // ============================================================================
-import { getFirestore as getCoopFirestore, doc as coopDoc, setDoc as coopSetDoc, updateDoc as coopUpdateDoc, onSnapshot as coopOnSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth as getCoopAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-const coopDb = getCoopFirestore();
-const coopAuth = getCoopAuth();
-
+const coopDb = window._coopDb;
+const coopAuth = window._coopAuth;
+const coopDoc = (...args) => window._coopDoc(...args);
+const coopSetDoc = (...args) => window._coopSetDoc(...args);
+const coopUpdateDoc = (...args) => window._coopUpdateDoc(...args);
+const coopOnSnapshot = (...args) => window._coopOnSnapshot(...args);
 window.coopState = {
   active: false,
   roomId: null,
