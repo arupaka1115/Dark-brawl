@@ -573,34 +573,9 @@ window.onerror = (msg, src, line) => {
   alert(`エラー (${line}行目): ${msg}`);
 };
 
-fetch("script.js?nocache=" + Date.now())
-  .then(r => r.text())
-  .then(code => {
-    const out = document.getElementById("authMessage");
-    const lines = code.split("\n");
-    let low = 1, high = lines.length, badLine = lines.length;
-    while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
-      const chunk = lines.slice(0, mid).join("\n");
-      try {
-        new Function(chunk);
-        low = mid + 1;
-      } catch (e) {
-        if (e.message.includes("Unexpected end") || e.message.includes("Unexpected EOF") || e.message.includes("Unterminated")) {
-          low = mid + 1;
-        } else {
-          badLine = mid;
-          high = mid - 1;
-        }
-      }
-    }
-    out.style.textAlign = "left";
-    out.style.fontSize = "11px";
-    out.innerHTML = `❌ <b>${badLine}行目付近</b>が原因:<br>` +
-      lines.slice(Math.max(0, badLine - 3), badLine + 2)
-        .map((l, idx) => `${Math.max(1, badLine - 2) + idx}: ${l.replace(/</g, "&lt;")}`)
-        .join("<br>");
-  });
+import("./script.js?v=" + Date.now()).catch(e => {
+  document.getElementById("authMessage").textContent = "script.jsエラー: " + e.message;
+});
 </script>
 </body>
 </html>
