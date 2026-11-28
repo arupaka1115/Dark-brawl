@@ -341,8 +341,9 @@ friendsListEl.innerHTML = "";
         ${inviteBtnHtml}
       </div>
     `;
-    friendsListEl.appendChild(card);
+friendsListEl.appendChild(card);
   });
+}
 document.getElementById("openFriendsBtn")?.addEventListener("click", () => {
   document.getElementById("friendsModal").classList.remove("hidden");
   document.getElementById("friendSearchMsg").textContent = "";
