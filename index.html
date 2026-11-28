@@ -2,26 +2,32 @@
 <html lang="ja">
 <head>
 <script>
-fetch("script.js?v=" + Date.now())
-  .then(r => r.text())
-  .then(code => {
-    // 文字列("")やコメント(//)以外の場所にある全角スペースを自動検出＆置換
-    const fixed = code.replace(/^[ ]+/gm, m => "  ".repeat(m.length))
-                      .replace(/([;{}(),=])\s*[ ]+\s*/g, "$1 ");
-    const blob = new Blob([fixed], { type: "application/javascript" });
-    import(URL.createObjectURL(blob))
-      .then(() => {
-        if (fixed !== code) {
-          alert("✅ 全角スペースを自動修正したらエラーが消えました！\nこのあと修正済みコードをクリップボードにコピーします。");
-          navigator.clipboard?.writeText(fixed);
-        } else {
-          alert("✅ 構文エラーなし！正常に読み込めています");
+window.addEventListener("load", () => {
+  const out = document.getElementById("authMessage");
+  fetch("script.js?v=" + Date.now())
+    .then(r => r.text())
+    .then(code => {
+      // コメントや文字列を除外せず、コードのインデントや記号横の全角スペースだけを抽出
+      const badLines = [];
+      code.split("\n").forEach((line, idx) => {
+        // 文字列リテラルの中身を一旦マスクしてから全角スペースを検査
+        const stripped = line.replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '""').replace(/\/\/.*$/, "");
+        if (/ /.test(stripped)) {
+          badLines.push((idx + 1) + "行目: " + line.trim());
         }
-      })
-      .catch(e => {
-        alert("❌ まだ別の構文エラーがあります:\n" + e.message);
       });
-  });
+
+      if (badLines.length > 0) {
+        out.style.color = "#ff5e57";
+        out.style.textAlign = "left";
+        out.style.fontSize = "12px";
+        out.innerHTML = "<b>全角スペース検出 (" + badLines.length + "件):</b><br>" + badLines.slice(0, 10).join("<br>");
+      } else {
+        out.style.color = "#2ed573";
+        out.textContent = "✅ コード内の全角スペースは0件です！";
+      }
+    });
+});
 </script>
     <link rel="stylesheet" href="style.css">
     <meta charset="UTF-8">
