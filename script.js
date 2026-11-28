@@ -5292,6 +5292,7 @@ function applyRemoteCoopPacket(data) {
         function finishMatch(playerWon) {
             gameState.status = "ended";
             if (typeof updateMyPresence === "function") updateMyPresence("online");
+            if (typeof leaveCoopRoom === "function" && coopState.active) leaveCoopRoom(true);
             sound.playEnd(playerWon);
 
           // ▼ 戦績をFirestoreにクラウド保存（勝利: +8 / 敗北: -4）
