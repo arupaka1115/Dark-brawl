@@ -305,15 +305,19 @@ async function renderFriendsModal() {
     return;
   }
 
-  friendsListEl.innerHTML = "";
+friendsListEl.innerHTML = "";
   memberProfiles.forEach((m, idx) => {
     const rankIcon = idx === 0 ? "👑" : `#${idx + 1}`;
     const card = document.createElement("div");
     card.className = `flex items-center justify-between rounded-2xl px-4 py-3 border ${
       m.isMe ? "bg-cyan-950/40 border-cyan-400/60" : "bg-slate-950/90 border-slate-800"
     }`;
+
+    const inviteBtnHtml = (!m.isMe && m.statusInfo.online && currentPresenceState === "online")
+      ? `<button onclick="inviteFriendToCoop('${m.uid}', '${m.username}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-b from-emerald-400 to-teal-600 text-slate-950 font-black text-xs shadow hover:brightness-110 cursor-pointer">📩 招待</button>`
+      : "";
+
     card.innerHTML = `
-      card.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center font-black text-xs text-amber-300">
           ${rankIcon}
@@ -334,17 +338,11 @@ async function renderFriendsModal() {
         <div class="text-right">
           <div class="text-sm font-black text-amber-300">🏆 ${m.trophies}</div>
         </div>
-        ${(!m.isMe && m.statusInfo.online && currentPresenceState === "online") ? `
-          <button onclick="inviteFriendToCoop('${m.uid}', '${m.username}')" class="px-3 py-1.5 rounded-xl bg-gradient-to-b from-emerald-400 to-teal-600 text-slate-950 font-black text-xs shadow hover:brightness-110 cursor-pointer">
-            📩 招待
-          </button>
-        ` : ''}
+        ${inviteBtnHtml}
       </div>
     `;
     friendsListEl.appendChild(card);
   });
-}
-
 document.getElementById("openFriendsBtn")?.addEventListener("click", () => {
   document.getElementById("friendsModal").classList.remove("hidden");
   document.getElementById("friendSearchMsg").textContent = "";
