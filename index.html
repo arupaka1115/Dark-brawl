@@ -569,33 +569,7 @@ document.getElementById("loginBtn").onclick = async () => {
   }
 };
 
-// Firebase準備完了後にゲーム本体(script.js)を読み込む
-(async () => {
-  const out = document.getElementById("authMessage");
-  const res = await fetch("script.js?v=" + Date.now());
-  const lines = (await res.text()).split("\n");
-
-  // 1行目から順にブロック単位で構文チェック（二分探索）
-  let low = 1, high = lines.length, badLine = lines.length;
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    const chunk = lines.slice(0, mid).join("\n");
-    try {
-      // モジュール構文（import/export）を一時的に無害化して構文チェック
-      new Function(chunk.replace(/^\s*(import|export)\b.*$/gm, ""));
-      low = mid + 1;
-    } catch (e) {
-      badLine = mid;
-      high = mid - 1;
-    }
-  }
-  out.style.textAlign = "left";
-  out.style.fontSize = "12px";
-  out.innerHTML = `❌ <b>${badLine}行目付近</b>に構文エラー:<br>` +
-    lines.slice(Math.max(0, badLine - 3), badLine + 2)
-      .map((l, idx) => `${Math.max(1, badLine - 2) + idx}: ${l.replace(/</g, "&lt;")}`)
-      .join("<br>");
-})();
+  import（"./script.js?v=" + Date.now（））.catch（e =>｛
   document.getElementById("authMessage").textContent = "script.jsエラー: " + e.message;
 });
 </script>
