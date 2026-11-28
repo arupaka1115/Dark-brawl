@@ -1,3 +1,9 @@
+window._coopDb = db;
+window._coopAuth = auth;
+window._coopDoc = doc;
+window._coopSetDoc = setDoc;
+window._coopUpdateDoc = updateDoc;
+window._coopOnSnapshot = onSnapshot;
 window.onerror = function(msg, url, line) {
   alert("エラー: " + msg + " (" + line + "行目)");
 };
