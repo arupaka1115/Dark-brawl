@@ -569,6 +569,10 @@ document.getElementById("loginBtn").onclick = async () => {
   }
 };
 
+window.onerror = (msg, src, line) => {
+  alert(`エラー (${line}行目): ${msg}`);
+};
+
 out.textContent = "エラー行を特定中...";
     let low = 1, high = lines.length, badLine = lines.length;
     while (low <= high) {
