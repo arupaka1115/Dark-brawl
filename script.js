@@ -8578,13 +8578,13 @@ document.getElementById("refreshFriendsBtn")?.addEventListener("click", () => {
         } else {
             window.addEventListener("load", bootGame);
 // ============================================================================
-// フェーズ3：フレンド協力マルチプレイシステム（完全独立・エラー防止版）
+// フェーズ3：フレンド協力マルチプレイシステム（名前重複ゼロ・完全独立版）
 // ============================================================================
-import { getFirestore, doc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore as getCoopFirestore, doc as coopDoc, setDoc as coopSetDoc, updateDoc as coopUpdateDoc, onSnapshot as coopOnSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth as getCoopAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-const coopDb = getFirestore();
-const coopAuth = getAuth();
+const coopDb = getCoopFirestore();
+const coopAuth = getCoopAuth();
 
 window.coopState = {
   active: false,
@@ -8632,7 +8632,7 @@ window.inviteFriendToCoop = async function(friendUid, friendName) {
     const myCharName = (typeof selectedData !== "undefined" && selectedData.name) ? selectedData.name : "ブレイズ";
     const mode = (typeof selectedGameMode !== "undefined") ? selectedGameMode : "diamond_hunt";
 
-    await setDoc(doc(coopDb, "rooms", roomId), {
+    await coopSetDoc(coopDoc(coopDb, "rooms", roomId), {
       status: "lobby",
       mode: mode,
       host: {
@@ -8655,7 +8655,7 @@ window.inviteFriendToCoop = async function(friendUid, friendName) {
       updatedAt: Date.now()
     });
 
-    await updateDoc(doc(coopDb, "users", friendUid), {
+    await coopUpdateDoc(coopDoc(coopDb, "users", friendUid), {
       coopInvite: {
         roomId: roomId,
         fromUid: user.uid,
@@ -8680,12 +8680,12 @@ document.getElementById("acceptCoopInviteBtn")?.addEventListener("click", async 
 
   try {
     banner.classList.add("hidden");
-    await updateDoc(doc(coopDb, "users", user.uid), { coopInvite: null });
+    await coopUpdateDoc(coopDoc(coopDb, "users", user.uid), { coopInvite: null });
 
     const myCharId = (typeof selectedData !== "undefined" && selectedData.id) ? selectedData.id : "saital";
     const myCharName = (typeof selectedData !== "undefined" && selectedData.name) ? selectedData.name : "ミコト";
 
-    await updateDoc(doc(coopDb, "rooms", roomId), {
+    await coopUpdateDoc(coopDoc(coopDb, "rooms", roomId), {
       "guest.joined": true,
       "guest.ready": false,
       "guest.charId": myCharId,
@@ -8703,12 +8703,12 @@ document.getElementById("declineCoopInviteBtn")?.addEventListener("click", async
   if (banner) banner.classList.add("hidden");
   const user = coopAuth.currentUser;
   if (user) {
-    await updateDoc(doc(coopDb, "users", user.uid), { coopInvite: null });
+    await coopUpdateDoc(coopDoc(coopDb, "users", user.uid), { coopInvite: null });
   }
 });
 
 function enterCoopRoom(roomId, role) {
-  leaveCoopRoom(false);
+  window.leaveCoopRoom(false);
   window.coopState.active = true;
   window.coopState.roomId = roomId;
   window.coopState.role = role;
@@ -8730,10 +8730,10 @@ function enterCoopRoom(roomId, role) {
     readyBtn?.classList.remove("hidden");
   }
 
-  window.coopState.unsubscribeRoom = onSnapshot(doc(coopDb, "rooms", roomId), (snap) => {
+  window.coopState.unsubscribeRoom = coopOnSnapshot(coopDoc(coopDb, "rooms", roomId), (snap) => {
     if (!snap.exists()) {
       alert("ルームが解散されました。");
-      leaveCoopRoom(false);
+      window.leaveCoopRoom(false);
       return;
     }
     const data = snap.data();
@@ -8741,7 +8741,7 @@ function enterCoopRoom(roomId, role) {
 
     if (data.status === "closed") {
       alert("ホストがルームを解散しました。");
-      leaveCoopRoom(false);
+      window.leaveCoopRoom(false);
       return;
     }
 
@@ -8846,19 +8846,19 @@ function renderCoopLobbyUI(data) {
 
 document.getElementById("coopRoomModeSelect")?.addEventListener("change", async (e) => {
   if (!window.coopState.active || window.coopState.role !== "host") return;
-  await updateDoc(doc(coopDb, "rooms", window.coopState.roomId), { mode: e.target.value });
+  await coopUpdateDoc(coopDoc(coopDb, "rooms", window.coopState.roomId), { mode: e.target.value });
 });
 
 document.getElementById("coopReadyToggleBtn")?.addEventListener("click", async () => {
   if (!window.coopState.active || window.coopState.role !== "guest" || !window.coopState.roomData) return;
   const nextReady = !window.coopState.roomData.guest.ready;
-  await updateDoc(doc(coopDb, "rooms", window.coopState.roomId), { "guest.ready": nextReady });
+  await coopUpdateDoc(coopDoc(coopDb, "rooms", window.coopState.roomId), { "guest.ready": nextReady });
 });
 
 document.getElementById("coopStartMatchBtn")?.addEventListener("click", async () => {
   if (!window.coopState.active || window.coopState.role !== "host" || !window.coopState.roomData) return;
   if (!window.coopState.roomData.guest.joined || !window.coopState.roomData.guest.ready) return;
-  await updateDoc(doc(coopDb, "rooms", window.coopState.roomId), { status: "playing" });
+  await coopUpdateDoc(coopDoc(coopDb, "rooms", window.coopState.roomId), { status: "playing" });
 });
 
 window.leaveCoopRoom = async function(notifyFirestore = true) {
@@ -8879,9 +8879,9 @@ window.leaveCoopRoom = async function(notifyFirestore = true) {
   if (notifyFirestore && prevRoomId) {
     try {
       if (prevRole === "host") {
-        await updateDoc(doc(coopDb, "rooms", prevRoomId), { status: "closed" });
+        await coopUpdateDoc(coopDoc(coopDb, "rooms", prevRoomId), { status: "closed" });
       } else {
-        await updateDoc(doc(coopDb, "rooms", prevRoomId), { "guest.joined": false, "guest.ready": false });
+        await coopUpdateDoc(coopDoc(coopDb, "rooms", prevRoomId), { "guest.joined": false, "guest.ready": false });
       }
     } catch (e) {}
   }
@@ -8898,7 +8898,7 @@ function startCoopBattleSync() {
 
     const field = window.coopState.role === "host" ? "hostState" : "guestState";
     try {
-      await updateDoc(doc(coopDb, "rooms", window.coopState.roomId), {
+      await coopUpdateDoc(coopDoc(coopDb, "rooms", window.coopState.roomId), {
         [field]: {
           x: Math.round(me.x),
           y: Math.round(me.y),
