@@ -1,11 +1,4 @@
-window._coopDb = db;
-window._coopAuth = auth;
-window._coopDoc = doc;
-window._coopSetDoc = setDoc;
-window._coopUpdateDoc = updateDoc;
-window._coopOnSnapshot = onSnapshot;
-window.onerror = function(msg, url, line) {
-  alert("エラー: " + msg + " (" + line + "行目)");
+alert("エラー: " + msg + " (" + line + "行目)");
 };
 
 const base = "https://www.gstatic.com/firebasejs/13.4.0/";
@@ -26,6 +19,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+window._coopDb = db;
+window._coopAuth = auth;
+window._coopDoc = doc;
+window._coopSetDoc = setDoc;
+window._coopUpdateDoc = updateDoc;
+window._coopOnSnapshot = onSnapshot;
 
 let currentUser = null;
 let playerStats = {
