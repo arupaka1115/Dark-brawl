@@ -569,7 +569,10 @@ document.getElementById("loginBtn").onclick = async () => {
   }
 };
 
-  
+import（"./script.js?v=" + Date.now（））.catch（e =>｛
+  document.getElementById("authMessage").textContent = "script.jsエラー: " + e.message;
+});
+    
 </script>
 </body>
 </html>
