@@ -504,17 +504,6 @@ window.onerror = function(msg, url, line) {
             </div>
         </div>
     </div>
-    <script type="module">
-  import { getFirestore, doc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-  import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-  window._coopDb = getFirestore();
-  window._coopAuth = getAuth();
-  window._coopDoc = doc;
-  window._coopSetDoc = setDoc;
-  window._coopUpdateDoc = updateDoc;
-  window._coopOnSnapshot = onSnapshot;
-</script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
