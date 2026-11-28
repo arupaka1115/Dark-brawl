@@ -8776,11 +8776,11 @@ function applyRemoteCoopPacket(data) {
             hudCatEl.textContent = catMeta.name;
             hudCatEl.className = `px-1.5 py-0.5 rounded text-[9px] font-bold border ${catMeta.badgeClass}`;
 
-            // 青チーム（左陣地）：ソロなら味方ボット2体、協力マルチなら自分＋フレンド＋味方ボット1体
+// 青チーム（左陣地）：ソロなら味方ボット2体、協力マルチなら自分＋フレンド＋味方ボット1体
             const blueSpawnX = 2.5 * TILE_SIZE;
-            if (coopState.active && coopState.roomData) {
-                const rData = coopState.roomData;
-                const isHost = coopState.role === "host";
+            if (window.coopState && window.coopState.active && window.coopState.roomData) {
+                const rData = window.coopState.roomData;
+                const isHost = window.coopState.role === "host";
                 const myInfo = isHost ? rData.host : rData.guest;
                 const friendInfo = isHost ? rData.guest : rData.host;
 
