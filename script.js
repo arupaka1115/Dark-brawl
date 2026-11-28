@@ -275,6 +275,9 @@ document.getElementById("friendSearchBtn")?.addEventListener("click", () => {
   sendFriendRequestByName(val);
 });
 document.getElementById("refreshFriendsBtn")?.addEventListener("click", () => {
+  if (typeof renderFriendsList === "function") renderFriendsList();
+  if (typeof loadFriendsList === "function") loadFriendsList();
+});
 
         // ----------------------------------------------------------------------------
         // 0. 8カテゴリー定義 ＆ キャラクターロスターデータ
