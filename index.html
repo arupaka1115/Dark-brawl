@@ -569,9 +569,26 @@ document.getElementById("loginBtn").onclick = async () => {
   }
 };
 
-fetch("script.js?v=" + Date.now())
+fetch("script.js?nocache=" + Date.now())
   .then(r => r.text())
   .then(code => {
+    const out = document.getElementById("authMessage");
+    // 1. バッククォート（`）の数が奇数かチェック
+    const backticks = (code.match(/(?<!\\)`/g) || []).length;
+    if (backticks % 2 !== 0) {
+      out.textContent = `❌ バッククォート(\`)が閉じられていません（合計 ${backticks} 個）`;
+      return;
+    }
+    // 2. /* ... */ ブロックコメントが閉じられていないかチェック
+    const openComments = (code.match(/\/\*/g) || []).length;
+    const closeComments = (code.match(/\*\//g) || []).length;
+    if (openComments > closeComments) {
+      const idx = code.lastIndexOf("/*");
+      const lineNum = code.slice(0, idx).split("\n").length;
+      out.textContent = `❌ ${lineNum}行目の /* コメントが閉じられていません`;
+      return;
+    }
+    // 3. ( ) と { } と [ ] のどれが閉じられていないかチェック
     const lines = code.split("\n");
     const stack = [];
     let inBacktick = false;
@@ -582,18 +599,18 @@ fetch("script.js?v=" + Date.now())
         if (c === "`" && line[j - 1] !== "\\") { inBacktick = !inBacktick; continue; }
         if (inBacktick) continue;
         if (c === "/" && line[j + 1] === "/") break;
-        if (c === "{") stack.push({ line: i + 1, text: line.trim() });
-        if (c === "}") stack.pop();
+        if (c === "{" || c === "(" || c === "[") stack.push({ ch: c, line: i + 1, text: line.trim() });
+        if (c === "}" || c === ")" || c === "]") stack.pop();
       }
     }
-    const lastUnclosed = stack[stack.length - 1];
-    if (lastUnclosed) {
-      document.getElementById("authMessage").innerHTML =
-        `❌ <b>${lastUnclosed.line}行目</b>の「{」が閉じられていません:<br>${lastUnclosed.text}`;
+    const last = stack[stack.length - 1];
+    if (last) {
+      out.innerHTML = `❌ <b>${last.line}行目</b>の「${last.ch}」が閉じられていません:<br>${last.text}`;
       return;
     }
+    out.textContent = "構文チェック通過（総行数: " + lines.length + "行）";
     import("./script.js?v=" + Date.now()).catch(e => {
-      document.getElementById("authMessage").textContent = "script.jsエラー: " + e.message;
+      out.textContent = "script.jsエラー: " + e.message;
     });
   });
     
