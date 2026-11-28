@@ -569,9 +569,33 @@ document.getElementById("loginBtn").onclick = async () => {
   }
 };
 
-import（"./script.js?v=" + Date.now（））.catch（e =>｛
-  document.getElementById("authMessage").textContent = "script.jsエラー: " + e.message;
-});
+fetch("script.js?v=" + Date.now())
+  .then(r => r.text())
+  .then(code => {
+    const lines = code.split("\n");
+    let depth = 0;
+    for (let i = 0; i < lines.length; i++) {
+      // 文字列とコメントを除いて { と } の数だけを数える
+      const s = lines[i].replace(/(["'`])(?:\\.|(?!\1).)*\1/g, "").replace(/\/\/.*$/, "");
+      for (const c of s) {
+        if (c === "{") depth++;
+        if (c === "}") depth--;
+      }
+      if (depth < 0) {
+        document.getElementById("authMessage").innerHTML =
+          `❌ <b>${i + 1}行目</b>に余分な「}」があります:<br>${lines[i]}`;
+        return;
+      }
+    }
+    if (depth !== 0) {
+      document.getElementById("authMessage").innerHTML =
+        `❌ ファイル全体で「{」が <b>${depth}個</b> 閉じられていません`;
+      return;
+    }
+    import("./script.js?v=" + Date.now()).catch(e => {
+      document.getElementById("authMessage").textContent = "script.jsエラー: " + e.message;
+    });
+  });
     
 </script>
 </body>
