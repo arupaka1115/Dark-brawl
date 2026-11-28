@@ -360,7 +360,7 @@ document.getElementById("refreshFriendsBtn")?.addEventListener("click", () => {
 // ============================================================================
 // フェーズ3：フレンド協力マルチプレイシステム（ルーム招待・ロビー・リアルタイム同期）
 // ============================================================================
-let coopState = {
+window.coopState = {
   active: false,
   roomId: null,
   role: null, // "host" | "guest"
