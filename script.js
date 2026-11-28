@@ -8776,19 +8776,35 @@ function applyRemoteCoopPacket(data) {
             hudCatEl.textContent = catMeta.name;
             hudCatEl.className = `px-1.5 py-0.5 rounded text-[9px] font-bold border ${catMeta.badgeClass}`;
 
-            // 青チーム（左陣地）：プレイヤー選択キャラ ＋ 名前付き味方ボット2体
+            // 青チーム（左陣地）：ソロなら味方ボット2体、協力マルチなら自分＋フレンド＋味方ボット1体
             const blueSpawnX = 2.5 * TILE_SIZE;
-            const allyRole1 = selectedData.id === "saital" ? "titan" : "saital";
-            const allyName1 = selectedData.id === "saital" ? "クロガネ" : "ミコト";
-            const allyRole2 = selectedData.id === "eric" ? "knight" : "eric";
-            const allyName2 = selectedData.id === "eric" ? "ダークナイト" : "ハヤテ";
+            if (coopState.active && coopState.roomData) {
+                const rData = coopState.roomData;
+                const isHost = coopState.role === "host";
+                const myInfo = isHost ? rData.host : rData.guest;
+                const friendInfo = isHost ? rData.guest : rData.host;
 
-            gameState.entities.push(
-                createBrawler(1, `${selectedData.name} (YOU)`, "blue", selectedData.id, true, blueSpawnX, MAP_HEIGHT * 0.5),
-                createBrawler(2, allyName1, "blue", allyRole1, false, blueSpawnX, MAP_HEIGHT * 0.3),
-                createBrawler(3, allyName2, "blue", allyRole2, false, blueSpawnX, MAP_HEIGHT * 0.7)
-            );
+                const myEntity = createBrawler(1, `${myInfo.name} (YOU)`, "blue", myInfo.charId, true, blueSpawnX, MAP_HEIGHT * 0.35);
+                const friendEntity = createBrawler(2, `${friendInfo.name} (FRIEND)`, "blue", friendInfo.charId, false, blueSpawnX, MAP_HEIGHT * 0.65);
+                friendEntity.isCoopFriend = true; // AIに動かさせず通信座標で動かす印
 
+                const allyRole2 = myInfo.charId === "eric" ? "knight" : "eric";
+                const allyName2 = myInfo.charId === "eric" ? "ダークナイト" : "ハヤテ";
+                const botEntity = createBrawler(3, allyName2, "blue", allyRole2, false, blueSpawnX, MAP_HEIGHT * 0.5);
+
+                gameState.entities.push(myEntity, friendEntity, botEntity);
+            } else {
+                const allyRole1 = selectedData.id === "saital" ? "titan" : "saital";
+                const allyName1 = selectedData.id === "saital" ? "クロガネ" : "ミコト";
+                const allyRole2 = selectedData.id === "eric" ? "knight" : "eric";
+                const allyName2 = selectedData.id === "eric" ? "ダークナイト" : "ハヤテ";
+
+                gameState.entities.push(
+                    createBrawler(1, `${selectedData.name} (YOU)`, "blue", selectedData.id, true, blueSpawnX, MAP_HEIGHT * 0.5),
+                    createBrawler(2, allyName1, "blue", allyRole1, false, blueSpawnX, MAP_HEIGHT * 0.3),
+                    createBrawler(3, allyName2, "blue", allyRole2, false, blueSpawnX, MAP_HEIGHT * 0.7)
+                );
+            }
             // 赤チーム（右陣地）：1人ずつ個別の名前（日本語名含む）がついた敵ボット3体
             const redSpawnX = MAP_WIDTH - 2.5 * TILE_SIZE;
             gameState.entities.push(
